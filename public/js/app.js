@@ -374,3 +374,82 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 });
+
+var debounce = function (fn, wait, immediate) {
+
+    var timeout;
+    return function () {
+
+        var context = this, args = arguments;
+        var later = function () {
+
+            timeout = null;
+            if (!immediate) fn.apply(context, args);
+        };
+
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+
+        if (immediate && !timeout) {
+            fn.apply(context, args);
+        }
+    };
+};
+
+var getXPathTo = function (element) {
+
+    if (element.id) {
+        return 'id("' + element.id + '")';
+    }
+    if (element === document.body) {
+        return '//' + element.tagName;
+    }
+    if (!element.tagName) {
+        return getXPathTo(element.parentNode);
+    }
+
+    var ix = 0; // counts same type siblings
+    var siblings = element.parentNode.childNodes;
+    for (var i = 0; i < siblings.length; ++i) {
+        var sibling = siblings[i];
+        if (sibling === element) {
+            return getXPathTo(element.parentNode) + '/' + element.tagName + '[' + (ix + 1) + ']';
+        }
+        if (sibling.nodeType === 1 && sibling.tagName === element.tagName) {
+            ix++;
+        }
+    }
+}
+
+var selectionShareWidget = null;
+var body = null;
+
+document.onselectionchange = debounce(function () {
+
+    if (!selectionShareWidget) {
+        selectionShareWidget = document.querySelectorAll('.selection-share-widget')[0];
+    }
+    if(!body) {
+        body = document.getElementsByTagName('body')[0];
+    }
+
+    var s = document.getSelection();
+    if (s.anchorNode && s.focusNode) {
+
+        if (!hasClass(selectionShareWidget, 'open')) {
+            addClass(selectionShareWidget, 'open');
+        }
+        var windowHeight = window.innerHeight;
+        var p = getXPathTo(s.anchorNode);
+        var selectionRect = s.getRangeAt(0).getBoundingClientRect();
+        selectionShareWidget.style.top = body.scrollTop + selectionRect.top - 45 + 'px';
+        selectionShareWidget.style.left = selectionRect.left + ( selectionRect.width / 2 ) + 'px';
+        console.log(selectionShareWidget.getBoundingClientRect());
+        
+        //console.log(document.evaluate(p, document, null, XPathResult.ANY_UNORDERED_NODE_TYPE, null));
+        
+    } else {
+        removeClass(selectionShareWidget, 'open');
+    }
+    console.log(s);
+}, 250);

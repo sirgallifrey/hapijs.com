@@ -1,0 +1,27 @@
+.selection-share-widget
+  top: -100
+  position: absolute
+  border-radius: 3px
+  padding: 6px 15px
+  font-size: $font-small
+  font-weight: $font-bold
+  text-align: center
+  text-decoration: none
+  line-height: 1.5
+  transition: all .3s ease-in 
+  -webkit-transition: all .3s ease-in
+  background-color: $gray
+  color: $orange
+  opacity: 0
+  &.open
+    opacity: 1
+  > .selection-share-widget__arrow
+    padding: 10px
+    position: absolute
+    border-radius: 3px;
+    bottom: -8px
+    transform: rotateZ(45deg)
+    background-color: $gray
+    z-index: -1
+    left: 50%
+    margin-left: -10px;
