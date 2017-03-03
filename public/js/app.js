@@ -373,26 +373,26 @@ document.addEventListener('DOMContentLoaded', function () {
             addClass(target, 'active');
         }
     }
+
+    initSelectionShareWidget();
 });
 
-var debounce = function (fn, wait, immediate) {
+var debounce = function (fn, wait) {
 
     var timeout;
     return function () {
 
-        var context = this, args = arguments;
+        var context = this
+        var args = arguments;
+
         var later = function () {
 
             timeout = null;
-            if (!immediate) fn.apply(context, args);
+            fn.apply(context, args);
         };
 
         clearTimeout(timeout);
         timeout = setTimeout(later, wait);
-
-        if (immediate && !timeout) {
-            fn.apply(context, args);
-        }
     };
 };
 
@@ -421,35 +421,97 @@ var getXPathTo = function (element) {
     }
 }
 
-var selectionShareWidget = null;
-var body = null;
+var getScrollTop = function () {
 
-document.onselectionchange = debounce(function () {
+    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+}
 
-    if (!selectionShareWidget) {
-        selectionShareWidget = document.querySelectorAll('.selection-share-widget')[0];
+var initSelectionShareWidget = function() {
+
+    if (!window.location.toString().match(/\/api\/\d\.\d\.\d|\/api[\/]?/g)) {
+        return;
     }
-    if(!body) {
-        body = document.getElementsByTagName('body')[0];
+
+    var isValidSelection = function (selection, context) {
+
+        return (
+            (selection.anchorNode && selection.focusNode)
+            && !(selection.anchorNode === selection.focusNode && selection.anchorOffset === selection.focusOffset)
+            && (selection.toString().replace(/[\x00-\x1F\x7F]/g, '').length > 0)
+            && (context ? (context.contains(selection.anchorNode) && context.contains(selection.focusNode)) : true)
+        );
     }
 
-    var s = document.getSelection();
-    if (s.anchorNode && s.focusNode) {
+    var makeSelectionShareUrl = function(selection, version) {
 
-        if (!hasClass(selectionShareWidget, 'open')) {
-            addClass(selectionShareWidget, 'open');
+        var href = window.location.toString();
+        console.log(href.match(/api\/\d\.\d\.\d/))
+    };
+
+    var shareWidget = document.querySelectorAll('.selection-share-widget')[0];
+    var copiedWidget = document.querySelectorAll('.selection-share-copied')[0];
+    var version = document.querySelectorAll('.tag-list-toggle')[0].childNodes[0];
+    var widgetLeftOffset = shareWidget.getBoundingClientRect().width / 2;
+    var copiedLeftOffset = copiedWidget.getBoundingClientRect().width / 2;
+    
+    var apiReference = document.querySelectorAll('.api-reference')[0];
+
+    var onSelectionChange = function () {
+
+        var selection = document.getSelection();
+        if (isValidSelection(selection, apiReference)) {
+
+            if (!hasClass(shareWidget, 'open')) {
+                addClass(shareWidget, 'open');
+            }
+            //var p = getXPathTo(selection.anchorNode);
+            var selectionRect = selection.getRangeAt(0).getBoundingClientRect();
+            shareWidget.style.top = copiedWidget.style.top = getScrollTop() + selectionRect.top - 45 + 'px';
+            shareWidget.style.left = selectionRect.left + ( selectionRect.width / 2 ) - widgetLeftOffset + 'px';
+            copiedWidget.style.left= selectionRect.left + ( selectionRect.width / 2 ) - copiedLeftOffset + 'px';
+            //console.log(document.evaluate(p, document, null, XPathResult.ANY_UNORDERED_NODE_TYPE, null));
+            
+        } else {
+            removeClass(shareWidget, 'open');
         }
-        var windowHeight = window.innerHeight;
-        var p = getXPathTo(s.anchorNode);
-        var selectionRect = s.getRangeAt(0).getBoundingClientRect();
-        selectionShareWidget.style.top = body.scrollTop + selectionRect.top - 45 + 'px';
-        selectionShareWidget.style.left = selectionRect.left + ( selectionRect.width / 2 ) + 'px';
-        console.log(selectionShareWidget.getBoundingClientRect());
-        
-        //console.log(document.evaluate(p, document, null, XPathResult.ANY_UNORDERED_NODE_TYPE, null));
-        
-    } else {
-        removeClass(selectionShareWidget, 'open');
     }
-    console.log(s);
-}, 250);
+
+    if (shareWidget && apiReference) {
+
+        shareWidget.addEventListener('click', function(e) {
+
+            e.preventDefault();
+            e.stopPropagation();
+            removeClass(shareWidget, 'open');
+            if (!hasClass(copiedWidget, 'open')) {
+                addClass(copiedWidget, 'open');
+                setTimeout(function() {
+
+                    removeClass(copiedWidget, 'open');
+                }, 2500);
+            }
+        });
+
+        var debounced = debounce(onSelectionChange, 250);
+        if (typeof document.onselectionchange !== 'undefined') {
+
+            document.onselectionchange = debounced;
+        } else {// firefox fallback
+
+            apiReference.addEventListener('mousedown', function(){
+
+                console.log('mousedown');
+
+                apiReference.addEventListener('mousemove', debounced);
+
+                var onUp = function () {
+
+                    apiReference.removeEventListener('mousemove', debounced);
+                    apiReference.removeEventListener('mouseup', onUp);
+                };
+                apiReference.addEventListener('mouseup', onUp);
+            });
+            document.addEventListener('click', onSelectionChange);
+        }
+    }
+};

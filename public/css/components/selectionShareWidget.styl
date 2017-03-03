@@ -1,4 +1,4 @@
-.selection-share-widget
+.selection-share-widget, .selection-share-copied
   top: -100
   position: absolute
   border-radius: 3px
@@ -8,11 +8,14 @@
   text-align: center
   text-decoration: none
   line-height: 1.5
-  transition: all .3s ease-in 
-  -webkit-transition: all .3s ease-in
   background-color: $gray
   color: $orange
+  cursor: pointer
   opacity: 0
+  user-select: none;
+  z-index: 2;
+  transition: all .3s ease-in 
+  -webkit-transition: all .3s ease-in
   &.open
     opacity: 1
   > .selection-share-widget__arrow
@@ -25,3 +28,6 @@
     z-index: -1
     left: 50%
     margin-left: -10px;
+
+.selection-share-widget
+  z-index: 3;
